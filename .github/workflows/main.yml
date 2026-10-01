@@ -1,0 +1,80 @@
+name: Build Android APK (Capacitor)
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+
+    - name: Set up Java JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Set up Node.js (Latest Version)
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+
+    - name: Install Project Dependencies
+      run: npm install
+
+    - name: Build React App
+      run: npm run build
+
+    - name: Install Capacitor & Configure Android
+      run: |
+        npm install @capacitor/core @capacitor/cli @capacitor/android
+        rm -rf android
+        npx cap init "Артёмка" "com.artemka.player" --web-dir=dist
+        npx cap add android
+
+    - name: Generate App Icons from Traffic Light Image
+      run: |
+        npm install @capacitor/assets -D
+        mkdir -p assets
+        
+        # Ищем вашу картинку светофора в репозитории
+        if [ -f "image_cutRz7.png" ]; then
+          TARGET_IMAGE="image_cutRz7.png"
+        elif [ -f "src/image_cutRz7.png" ]; then
+          TARGET_IMAGE="src/image_cutRz7.png"
+        elif [ -f "public/image_cutRz7.png" ]; then
+          TARGET_IMAGE="public/image_cutRz7.png"
+        else
+          TARGET_IMAGE=$(ls *.png 2>/dev/null | head -n 1)
+        fi
+        
+        # Если картинка найдена, создаем из нее полноценный набор (иконка + фон)
+        if [ ! -z "$TARGET_IMAGE" ]; then
+          cp "$TARGET_IMAGE" assets/icon-only.png
+          cp "$TARGET_IMAGE" assets/icon-foreground.png
+          cp "$TARGET_IMAGE" assets/icon-background.png
+        fi
+        
+        # Генерируем полный набор адаптивных ресурсов, закрывая ошибку отсутствия фонов
+        npx capacitor-assets generate --android --iconBackgroundColor "#4A90E2"
+
+    - name: Sync Assets to Android Project
+      run: npx cap sync android
+
+    - name: Build Android APK via Gradle
+      run: |
+        cd android
+        chmod +x gradlew
+        ./gradlew assembleDebug
+
+    - name: Upload Finished APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Artemka-App-Debug-APK
+        path: android/app/build/outputs/apk/debug/app-debug.apk
+        retention-days: 7
