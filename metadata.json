@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix Артёмка 3.3.1",
+  "description": "Детское приложение-плеер с тремя большими кнопками: Красная, Желтая и Зеленая.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
